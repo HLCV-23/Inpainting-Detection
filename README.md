@@ -4,7 +4,7 @@ This repository contains a comprehensive project on automatic image inpainting a
 ## Project Description
 We aim to tackle the growing issue of misinformation spread through AI-modified images. This project comprises two key components: an automatic image inpainting model and a detector for AI-based image alterations.
 
-*Automatic Inpainting*: We propose an automatic image inpainting system by utilizing deep learning techniques and leveraging state-of-the-art models like the Inpaint Anything model by Yu \etal. Our model segments images selects specific objects, and then modifies these objects using inpainting techniques. This process demonstrates how real photos can be maliciously altered without human supervision, highlighting the potential dangers of image manipulation.
+*Automatic Inpainting*: We propose an automatic image inpainting system by utilizing deep learning techniques and leveraging state-of-the-art models like the Inpaint Anything model by Yu et al. Our model segments images selects specific objects, and then modifies these objects using inpainting techniques. This process demonstrates how real photos can be maliciously altered without human supervision, highlighting the potential dangers of image manipulation.
 
 *Modification Detection*: To counterbalance the threat posed by our inpainting model, we are also developing a model capable of detecting and locating these modifications. We train this model using a dataset constructed by our automatic inpainting pipeline, demonstrating its defensive capabilities against AI-manipulated images.
 

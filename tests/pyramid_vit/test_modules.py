@@ -7,6 +7,7 @@ from pyramid_vit.modules import (
     SpatialReductionAttention,
     MLP,
     TransformerEncoder,
+    PyramidBlock
 )
 
 
@@ -64,3 +65,15 @@ class TestTransformerBlock(unittest.TestCase):
         output_tensor = layer(input_tensor)
         expected_size = (1, height * width, embed_dim)
         self.assertEqual(output_tensor.size(), expected_size)
+
+class TestPyramidBlock(unittest.TestCase):
+
+    def test_output_size(self):
+        height, width, out_channels, patch_size = 64, 64, 16, 2
+        num_encoders, reduction_ratio, num_heads, mlp_ratio = 1, 4, 1, 4
+        layer = PyramidBlock(height, width, out_channels, patch_size, num_encoders, reduction_ratio, num_heads, mlp_ratio)
+        input_tensor = torch.randn(1, 3, height, width)
+        output_tensor = layer(input_tensor)
+        expected_size = (1, height // patch_size, width // patch_size, out_channels)
+        self.assertEqual(output_tensor.size(), expected_size)
+

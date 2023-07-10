@@ -1,4 +1,7 @@
-""" Implement modules for building a pyramid vision transformer as described in https://arxiv.org/abs/2102.12122"""
+"""
+Implement modules for building a pyramid vision transformer as described in https://arxiv.org/abs/2102.12122.
+Downsampling operation has been modified according to https://arxiv.org/abs/2106.13797.
+"""
 from torch import nn
 import torch
 
@@ -29,7 +32,7 @@ class DownsamplingBlock(nn.Module):
 class PositionalEncoding(nn.Module):
     """Positional encoding."""
 
-    def __init__(self, in_channels: int, out_channels: int, dropout):
+    def __init__(self, in_channels: int, out_channels: int, dropout: float = 0.0):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.P = torch.zeros((1, in_channels, out_channels))
@@ -56,16 +59,16 @@ class SpatialReductionAttention(nn.Module):
         )
         self.reduction_ratio = reduction_ratio
         self.W_S = nn.LazyLinear(embed_dim)
-        # Layer norm for x
+        # Layer norm for Q
         self.norm1 = nn.LayerNorm(embed_dim)
-        # Layer norm for x_sr
+        # Layer norm for spatially reduced K and V
         self.norm2 = nn.LayerNorm(embed_dim)
 
     def forward(self, x):
         # x is a tensor of flattened patches.
         batches, height_width, channels = x.shape
 
-        # Spatial reduction as described in the paper.
+        # Spatial reduction as described in the original Pyramid ViT paper.
         x_sr = x.view(
             batches,
             height_width // self.reduction_ratio**2,
@@ -103,7 +106,7 @@ class TransformerEncoder(nn.Module):
         num_heads: int,
         mlp_ratio: int,
         reduction_ratio: int,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         super().__init__()
         self.norm1 = nn.LayerNorm(embed_dim)
@@ -117,3 +120,38 @@ class TransformerEncoder(nn.Module):
         x = x + self.sra(self.norm1(x))
         x = x + self.mlp(self.norm2(x))
         return x
+
+
+class PyramidBlock(nn.Module):
+    """Block containing one stage of the Pyramid Vision Transformer."""
+
+    def __init__(
+        self,
+        height: int,
+        width: int,
+        out_channels: int,
+        patch_size: int,
+        num_encoders: int,
+        reduction_ratio: int,
+        num_heads: int,
+        mlp_ratio: int
+    ):
+        super().__init__()
+        self.out_channels = out_channels
+        self.downsampling = DownsamplingBlock(out_channels, patch_size)
+        self.height_new = height // patch_size
+        self.width_new = width // patch_size
+        self.size_patch_embedding = self.height_new * self.width_new
+        self.positional_encoding = PositionalEncoding(self.size_patch_embedding, out_channels)
+        self.encoders = nn.ModuleList([
+            TransformerEncoder(out_channels, num_heads, mlp_ratio, reduction_ratio)
+            for _ in range(num_encoders)
+        ])
+
+    def forward(self, x):
+        x = self.downsampling(x)
+        x = self.positional_encoding(x)
+        for encoder in self.encoders:
+            x = encoder(x)
+        return x.view(-1, self.height_new, self.width_new, self.out_channels)
+

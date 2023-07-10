@@ -27,8 +27,8 @@ class TestDownsamplingBlock(unittest.TestCase):
 
 class TestPositionalEncoding(unittest.TestCase):
     def test_output_size(self):
-        height, width, out_channels, patch_size = 64, 64, 16, 2  # example values
-        in_channels = height // patch_size * width // patch_size
+        height, width, out_channels = 32, 32, 16
+        in_channels = height * width
         layer = PositionalEncoding(in_channels, out_channels, 0.0)
         input_tensor = torch.randn(1, in_channels, out_channels)
         output_tensor = layer(input_tensor)
@@ -74,6 +74,6 @@ class TestPyramidBlock(unittest.TestCase):
         layer = PyramidBlock(height, width, out_channels, patch_size, num_encoders, reduction_ratio, num_heads, mlp_ratio)
         input_tensor = torch.randn(1, 3, height, width)
         output_tensor = layer(input_tensor)
-        expected_size = (1, height // patch_size, width // patch_size, out_channels)
+        expected_size = (1, out_channels, height // patch_size, width // patch_size)
         self.assertEqual(output_tensor.size(), expected_size)
 

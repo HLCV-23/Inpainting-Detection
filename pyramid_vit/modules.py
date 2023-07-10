@@ -23,7 +23,7 @@ class DownsamplingBlock(nn.Module):
         # Shape: (B, C_out, H//S, W//S)
         x = self.proj(x)
         # Shape: (B, H//S*W//S, C_out)
-        x = x.flatten(2).transpose(1, 2)
+        x = x.flatten(2).transpose(1, 2).contiguous()
         # Shape: (B, H//S*W//S, C_out)
         x = self.norm(x)
         return x
@@ -73,7 +73,7 @@ class SpatialReductionAttention(nn.Module):
             batches,
             height_width // self.reduction_ratio**2,
             (self.reduction_ratio**2) * channels,
-        )
+        ).contiguous()
         x_sr = self.W_S(x_sr)
         x_sr = self.norm1(x_sr)
 
@@ -134,24 +134,31 @@ class PyramidBlock(nn.Module):
         num_encoders: int,
         reduction_ratio: int,
         num_heads: int,
-        mlp_ratio: int
+        mlp_ratio: int,
     ):
         super().__init__()
-        self.out_channels = out_channels
         self.downsampling = DownsamplingBlock(out_channels, patch_size)
         self.height_new = height // patch_size
         self.width_new = width // patch_size
         self.size_patch_embedding = self.height_new * self.width_new
-        self.positional_encoding = PositionalEncoding(self.size_patch_embedding, out_channels)
-        self.encoders = nn.ModuleList([
-            TransformerEncoder(out_channels, num_heads, mlp_ratio, reduction_ratio)
-            for _ in range(num_encoders)
-        ])
+        self.positional_encoding = PositionalEncoding(
+            self.size_patch_embedding, out_channels
+        )
+        self.encoders = nn.ModuleList(
+            [
+                TransformerEncoder(out_channels, num_heads, mlp_ratio, reduction_ratio)
+                for _ in range(num_encoders)
+            ]
+        )
 
     def forward(self, x):
+        batches = x.shape[0]
         x = self.downsampling(x)
         x = self.positional_encoding(x)
         for encoder in self.encoders:
             x = encoder(x)
-        return x.view(-1, self.height_new, self.width_new, self.out_channels)
-
+        return (
+            x.view(batches, self.height_new, self.width_new, -1)
+            .permute(0, 3, 1, 2)
+            .contiguous()
+        )

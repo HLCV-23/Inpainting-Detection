@@ -1,5 +1,4 @@
-""""Implement the pyramid vision transformer as described in https://arxiv.org/abs/2102.12122.
-"""
+"""Implement the pyramid vision transformer as described in https://arxiv.org/abs/2102.12122."""
 from pyramid_vit.modules import PyramidBlock
 from torch import nn
 from typing import Tuple, List
@@ -9,13 +8,13 @@ import math
 class PyramidVisionTransformer(nn.Module):
     def __init__(
             self,
-            input_dims: Tuple[int, int, int],  # = (3, 224, 224),
-            out_channels: List[int],  # = [64, 128, 320, 512],
-            patch_sizes: List[int],  # = [4, 2, 2, 2],
-            encoders_per_stage: List[int],  # = [2, 2, 2, 2],
-            reduction_ratio: List[int],  # = [8, 4, 2, 1],
-            num_heads: List[int],  # = [1, 2, 5, 8],
-            mlp_ratio: List[int]  # =[8, 8, 4, 4]
+            input_dims: Tuple[int, int, int],
+            out_channels: List[int],
+            patch_sizes: List[int],
+            encoders_per_stage: List[int],
+            reduction_ratio: List[int],
+            num_heads: List[int],
+            mlp_ratio: List[int]
     ):
         super().__init__()
         self.stages = nn.ModuleList()
@@ -35,8 +34,13 @@ class PyramidVisionTransformer(nn.Module):
                     mlp_ratio=mlp_ratio[i]
                 )
             )
+        self.output_height = input_dims[1] // math.prod(patch_sizes)
+        self.output_width = input_dims[2] // math.prod(patch_sizes)
+        self.output_embed_dim = out_channels[-1]
 
     def forward(self, x):
         for stage in self.stages:
             x = stage(x)
         return x
+
+
